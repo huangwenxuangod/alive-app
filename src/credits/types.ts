@@ -1,22 +1,22 @@
-export type CreditTransactionType = 
-  | "REGISTER_GIFT" 
-  | "PURCHASE" 
-  | "SUBMIT_ACTION" 
-  | "AI_SUGGEST" 
-  | "SHARE_REWARD" 
-  | "EXPIRE";
+import type { CreditAccount, CreditTransaction, CreditBatch } from '@/db/types';
 
-export interface CreditTransaction {
-  id: string;
-  type: CreditTransactionType;
-  description: string;
-  amount: number;
-  remainingAmount?: number;
-  createdAt: string;
-  expireAt?: string;
-}
+export type { CreditAccount, CreditTransaction, CreditBatch };
 
-export interface UserCredit {
+export type CreditDirection = 'IN' | 'OUT';
+
+export interface CreditStats {
   currentCredits: number;
-  transactions: CreditTransaction[];
+  totalEarned: number;
+  totalConsumed: number;
+  totalExpired: number;
 }
+
+// ====== Query Keys ======
+// 注意：放在这里而不是 actions/credits.ts，因为客户端也需要使用
+// Server Action 文件中的非 action 导出在客户端不可用
+
+export const creditsKeys = {
+  all: ['credits'] as const,
+  balance: (userId: string) => [...creditsKeys.all, 'balance', userId] as const,
+  transactions: (userId: string) => [...creditsKeys.all, 'transactions', userId] as const,
+};

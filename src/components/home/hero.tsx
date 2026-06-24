@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useSession } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
 
 export function Hero() {
+  const { data: session } = useSession();
+  const isLoggedIn = !!session?.user;
+  const ctaHref = isLoggedIn ? "/challenge" : "/auth/login";
+
   return (
     <section className="text-center py-20">
       <motion.h1
@@ -56,11 +62,10 @@ export function Hero() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
-        <Link
-          href="/challenge"
-          className="inline-block bg-white text-black px-12 py-4 rounded-lg text-lg font-bold transition-transform hover:scale-105"
-        >
-          开始挑战
+        <Link href={ctaHref}>
+          <Button size="lg" className="bg-white text-black hover:bg-white/90 px-12 py-4 text-lg font-bold">
+            开始挑战
+          </Button>
         </Link>
       </motion.div>
     </section>

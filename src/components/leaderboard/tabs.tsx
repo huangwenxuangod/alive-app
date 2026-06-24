@@ -2,7 +2,9 @@
 
 import { cn } from "@/lib/utils";
 
-const tabs = [
+export type LeaderboardTab = "alive" | "revenue" | "first" | "survival";
+
+const tabs: { id: LeaderboardTab; label: string }[] = [
   { id: "alive", label: "活人榜" },
   { id: "revenue", label: "收入榜" },
   { id: "first", label: "第一刀榜" },
@@ -10,8 +12,8 @@ const tabs = [
 ];
 
 interface LeaderboardTabsProps {
-  active: string;
-  onChange: (tab: string) => void;
+  active: LeaderboardTab;
+  onChange: (tab: LeaderboardTab) => void;
 }
 
 export function LeaderboardTabs({ active, onChange }: LeaderboardTabsProps) {

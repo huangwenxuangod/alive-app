@@ -1,8 +1,18 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 
-const feedItems = [
+type FeedStatus = "alive" | "warning" | "dead";
+
+const feedItems: {
+  name: string;
+  status: FeedStatus;
+  statusText: string;
+  time: string;
+  text: string;
+  gradient: string;
+}[] = [
   {
     name: "黄文轩",
     status: "alive",
@@ -29,11 +39,16 @@ const feedItems = [
   },
 ];
 
-const statusColors: Record<string, string> = {
-  alive: "text-[#00ff88]",
-  warning: "text-[#ffaa00]",
-  dead: "text-[#444]",
-};
+function statusVariant(status: FeedStatus): "default" | "warning" | "dead" {
+  switch (status) {
+    case "alive":
+      return "default";
+    case "warning":
+      return "warning";
+    case "dead":
+      return "dead";
+  }
+}
 
 export function Feed() {
   return (
@@ -55,9 +70,9 @@ export function Feed() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-semibold text-sm">{item.name}</span>
-                <span className={`text-xs ${statusColors[item.status]}`}>
+                <Badge variant={statusVariant(item.status)}>
                   {item.statusText}
-                </span>
+                </Badge>
                 <span className="text-xs text-[#666] ml-auto">{item.time}</span>
               </div>
               <p className="text-sm text-[#888]">{item.text}</p>

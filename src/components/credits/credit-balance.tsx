@@ -1,20 +1,24 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useCreditStore } from "@/stores/credit-store";
-import { Coins } from "lucide-react";
+import { useCreditBalance } from '@/hooks/use-credits';
+import { Coins } from 'lucide-react';
 
 export function CreditBalance() {
-  const { currentCredits, init } = useCreditStore();
+  const { data: credits, isLoading } = useCreditBalance();
 
-  useEffect(() => {
-    init();
-  }, [init]);
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-1.5 text-sm font-semibold">
+        <Coins size={16} className="text-[#00ff88]" />
+        <div className="w-6 h-4 bg-[#1a1a1a] rounded animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-1.5 text-sm text-[#00ff88] font-semibold">
       <Coins size={16} />
-      <span>{currentCredits}</span>
+      <span>{credits ?? 0}</span>
     </div>
   );
 }

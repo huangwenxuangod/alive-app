@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
 
 const steps = [
   {
@@ -32,13 +33,16 @@ export function Steps() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: i * 0.1 }}
-            className="bg-[#111] border border-[#1a1a1a] rounded-xl p-8 text-center"
           >
-            <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center text-xl font-bold mx-auto mb-4">
-              {step.num}
-            </div>
-            <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-            <p className="text-sm text-[#888]">{step.desc}</p>
+            <Card className="h-full">
+              <CardContent className="p-8 text-center">
+                <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center text-xl font-bold mx-auto mb-4">
+                  {step.num}
+                </div>
+                <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
+                <p className="text-sm text-[#888]">{step.desc}</p>
+              </CardContent>
+            </Card>
           </motion.div>
         ))}
       </div>

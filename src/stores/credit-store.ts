@@ -1,17 +1,29 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CreditTransaction, CreditTransactionType } from "@/credits/types";
-import { CREDIT_PACKAGES, REGISTER_GIFT_CREDITS } from "@/config/credits";
+import { CREDIT_PACKAGES, REGISTER_GIFT_CREDITS, CREDIT_TRANSACTION_TYPE } from "@/config/credits";
+
+export type CreditTransactionType =
+  (typeof CREDIT_TRANSACTION_TYPE)[keyof typeof CREDIT_TRANSACTION_TYPE];
+
+export interface StoreCreditTransaction {
+  id: string;
+  type: CreditTransactionType;
+  description: string;
+  amount: number;
+  remainingAmount?: number;
+  createdAt: string;
+  expireAt?: string;
+}
 
 interface CreditStore {
   currentCredits: number;
-  transactions: CreditTransaction[];
+  transactions: StoreCreditTransaction[];
   initialized: boolean;
   init: () => void;
   addCredits: (amount: number, type: CreditTransactionType, description: string, expireDays?: number) => boolean;
   consumeCredits: (amount: number, type: CreditTransactionType, description: string) => boolean;
   getBalance: () => number;
-  getTransactions: () => CreditTransaction[];
+  getTransactions: () => StoreCreditTransaction[];
 }
 
 function generateId(): string {
@@ -30,13 +42,13 @@ export const useCreditStore = create<CreditStore>()(
         if (initialized) return;
         
         // 检查是否已有注册赠送记录
-        const hasRegisterGift = transactions.some((t) => t.type === "REGISTER_GIFT");
+        const hasRegisterGift = transactions.some((t) => t.type === CREDIT_TRANSACTION_TYPE.REGISTER_GIFT);
         if (!hasRegisterGift) {
           const now = new Date();
           const expireAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-          const transaction: CreditTransaction = {
+          const transaction: StoreCreditTransaction = {
             id: generateId(),
-            type: "REGISTER_GIFT",
+            type: CREDIT_TRANSACTION_TYPE.REGISTER_GIFT,
             description: "注册赠送",
             amount: REGISTER_GIFT_CREDITS,
             remainingAmount: REGISTER_GIFT_CREDITS,
@@ -58,7 +70,7 @@ export const useCreditStore = create<CreditStore>()(
         const now = new Date();
         const expireAt = expireDays ? new Date(now.getTime() + expireDays * 24 * 60 * 60 * 1000) : undefined;
         
-        const transaction: CreditTransaction = {
+        const transaction: StoreCreditTransaction = {
           id: generateId(),
           type,
           description,
@@ -81,7 +93,7 @@ export const useCreditStore = create<CreditStore>()(
 
         // FIFO: 按过期时间排序，优先消耗即将过期的
         const sorted = [...transactions]
-          .filter((t) => (t.remainingAmount ?? 0) > 0 && !["USAGE", "EXPIRE"].includes(t.type))
+          .filter((t) => (t.remainingAmount ?? 0) > 0 && t.type !== CREDIT_TRANSACTION_TYPE.EXPIRE)
           .sort((a, b) => {
             const aExp = a.expireAt ? new Date(a.expireAt).getTime() : Infinity;
             const bExp = b.expireAt ? new Date(b.expireAt).getTime() : Infinity;
@@ -99,7 +111,7 @@ export const useCreditStore = create<CreditStore>()(
           return { ...t, remainingAmount: available - deduct };
         });
 
-        const usageTransaction: CreditTransaction = {
+        const usageTransaction: StoreCreditTransaction = {
           id: generateId(),
           type,
           description,
