@@ -43,6 +43,7 @@ export const submission = pgTable(
     amount: integer('amount').notNull(),
     note: text('note'),
     screenshotUrl: text('screenshot_url'),
+    screenshotData: text('screenshot_data'), // MVP: base64 编码图片，≤500KB
     date: text('date').notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },

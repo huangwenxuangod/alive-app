@@ -142,6 +142,7 @@ export async function submitAction(
       amount: input.amount,
       note: input.note || null,
       screenshotUrl: input.screenshotUrl || null,
+      screenshotData: input.screenshotData || null,
       date: today,
     })
     .returning();

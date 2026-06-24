@@ -6,6 +6,7 @@ import type { CreditAccount, CreditBatch } from '@/db/types';
 import { generateId } from '@/lib/utils';
 import { CREDIT_TRANSACTION_TYPE } from '@/config/credits';
 import { siteConfig } from '@/config/site';
+import { calculateFifoConsume } from './fifo';
 
 export interface CreditResult {
   success: boolean;
@@ -199,26 +200,14 @@ export async function consumeCredits(params: ConsumeCreditsParams): Promise<Cred
         asc(creditBatch.createdAt),
       );
 
-    let remainingToConsume = amount;
-    const batchUpdates: { id: string; remaining: number }[] = [];
-
-    // FIFO 扣减
-    for (const batch of batches) {
-      if (remainingToConsume <= 0) break;
-
-      const consumeFromBatch = Math.min(batch.remainingAmount, remainingToConsume);
-      const newRemaining = batch.remainingAmount - consumeFromBatch;
-
-      batchUpdates.push({ id: batch.id, remaining: newRemaining });
-      remainingToConsume -= consumeFromBatch;
-    }
-
-    if (remainingToConsume > 0) {
-      return { success: false, error: '积分不足' };
+    // 使用纯函数计算 FIFO 消耗
+    const consumeResult = calculateFifoConsume(batches, amount);
+    if (!consumeResult.success) {
+      return { success: false, error: consumeResult.error || '积分不足' };
     }
 
     // 执行批次更新
-    for (const update of batchUpdates) {
+    for (const update of consumeResult.batchUpdates) {
       await db
         .update(creditBatch)
         .set({ remainingAmount: update.remaining, updatedAt: new Date() })

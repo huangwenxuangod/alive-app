@@ -14,6 +14,7 @@ export const submitActionSchema = z.object({
   amount: z.number().int().min(0, '金额不能为负数'),
   note: z.string().max(500, '备注最多500字').optional(),
   screenshotUrl: z.string().optional(),
+  screenshotData: z.string().max(700000, '截图数据过大').optional(), // base64 ≤ ~500KB
 });
 
 export type CreateChallengeInput = z.infer<typeof createChallengeSchema>;

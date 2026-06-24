@@ -17,7 +17,8 @@ import { Input } from '@/components/ui/input';
 import { useSubmitAction } from '@/hooks/use-challenge';
 import { useCreditBalance } from '@/hooks/use-credits';
 import { SUBMIT_COST } from '@/config/credits';
-import { Plus } from 'lucide-react';
+import { compressImage, formatFileSize } from '@/utils/image-compress';
+import { ImagePlus, X, Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
   action: z.string().min(1, '行动描述不能为空').max(500, '行动描述最多500字'),
@@ -38,7 +39,14 @@ export function SubmitModal({ open, onOpenChange }: SubmitModalProps) {
   const { mutate: submitAction, isPending } = useSubmitAction();
   const { data: credits } = useCreditBalance();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [fileName, setFileName] = useState('');
+
+  // 截图状态
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [screenshotData, setScreenshotData] = useState<string | null>(null);
+  const [screenshotName, setScreenshotName] = useState('');
+  const [compressing, setCompressing] = useState(false);
+  const [compressInfo, setCompressInfo] = useState<{ orig: number; comp: number } | null>(null);
+  const [compressError, setCompressError] = useState('');
 
   const {
     register,
@@ -54,11 +62,41 @@ export function SubmitModal({ open, onOpenChange }: SubmitModalProps) {
     },
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      // MVP 阶段：只保存文件名，不上传
-      setFileName(e.target.files[0].name);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCompressError('');
+    setCompressing(true);
+    setScreenshotPreview(null);
+    setScreenshotData(null);
+    setCompressInfo(null);
+
+    try {
+      const result = await compressImage(file);
+      if (result.success && result.dataUrl) {
+        setScreenshotPreview(result.dataUrl);
+        setScreenshotData(result.dataUrl);
+        setScreenshotName(file.name);
+        setCompressInfo({ orig: result.originalSize, comp: result.compressedSize });
+      } else {
+        setCompressError(result.error || '图片处理失败');
+      }
+    } catch {
+      setCompressError('图片处理失败');
+    } finally {
+      setCompressing(false);
+      // 清空 input，允许重复选择同一文件
+      if (fileRef.current) fileRef.current.value = '';
     }
+  };
+
+  const removeScreenshot = () => {
+    setScreenshotPreview(null);
+    setScreenshotData(null);
+    setScreenshotName('');
+    setCompressInfo(null);
+    setCompressError('');
   };
 
   const onSubmit = (values: FormValues) => {
@@ -69,12 +107,13 @@ export function SubmitModal({ open, onOpenChange }: SubmitModalProps) {
         action: values.action.trim(),
         amount: amountCents,
         note: values.note || undefined,
+        screenshotData: screenshotData || undefined,
       },
       {
         onSuccess: (result) => {
           if (result.data?.success) {
             reset();
-            setFileName('');
+            removeScreenshot();
             onOpenChange(false);
           }
         },
@@ -126,33 +165,68 @@ export function SubmitModal({ open, onOpenChange }: SubmitModalProps) {
 
             <div>
               <label className="block text-sm text-[#888] font-semibold mb-2">
-                收入截图
+                收入截图 <span className="text-[#666] font-normal">(可选，≤500KB)</span>
               </label>
-              <div
-                onClick={() => fileRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-                  fileName
-                    ? 'border-[#00ff88]'
-                    : 'border-[#1a1a1a] hover:border-[#333]'
-                }`}
-              >
-                <div className="text-2xl mb-2">
-                  {fileName ? '✓' : <Plus className="inline w-6 h-6" />}
+
+              {!screenshotPreview ? (
+                <div
+                  onClick={() => !compressing && fileRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                    compressing
+                      ? 'border-[#333] cursor-wait bg-[#0a0a0a]'
+                      : 'border-[#1a1a1a] hover:border-[#333]'
+                  }`}
+                >
+                  {compressing ? (
+                    <>
+                      <Loader2 className="inline w-6 h-6 animate-spin text-[#888] mb-2" />
+                      <div className="text-sm text-[#888]">正在压缩图片...</div>
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="inline w-6 h-6 text-[#888] mb-2" />
+                      <div className="text-sm text-[#888]">点击上传截图</div>
+                      <div className="text-xs text-[#666] mt-1">
+                        支持 JPG/PNG/WebP，自动压缩至 500KB 以内
+                      </div>
+                    </>
+                  )}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
                 </div>
-                <div className="text-sm text-[#888]">
-                  {fileName || '点击上传截图'}
+              ) : (
+                <div className="relative rounded-xl overflow-hidden border border-[#1a1a1a]">
+                  <img
+                    src={screenshotPreview}
+                    alt="截图预览"
+                    className="w-full max-h-[200px] object-contain bg-[#0a0a0a]"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeScreenshot}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 flex items-center justify-center hover:bg-black/90 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                  <div className="px-3 py-2 bg-[#111] text-xs text-[#888] flex items-center justify-between">
+                    <span className="truncate">{screenshotName}</span>
+                    {compressInfo && (
+                      <span className="text-[#00ff88] ml-2 shrink-0">
+                        {formatFileSize(compressInfo.orig)} → {formatFileSize(compressInfo.comp)}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-xs text-[#666] mt-1">
-                  支持 Stripe、PayPal、微信、支付宝等
-                </div>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </div>
+              )}
+
+              {compressError && (
+                <p className="text-xs text-[#ff4444] mt-1">{compressError}</p>
+              )}
             </div>
 
             <div>
@@ -185,7 +259,7 @@ export function SubmitModal({ open, onOpenChange }: SubmitModalProps) {
             </Button>
             <Button
               type="submit"
-              disabled={isPending || creditsInsufficient}
+              disabled={isPending || creditsInsufficient || compressing}
             >
               {isPending ? '提交中...' : '提交'}
             </Button>

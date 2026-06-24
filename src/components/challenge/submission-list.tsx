@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { useSubmissions } from '@/hooks/use-challenge';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils';
+import { ImageIcon, X } from 'lucide-react';
 
 interface SubmissionListProps {
   challengeId: string;
@@ -10,6 +12,7 @@ interface SubmissionListProps {
 
 export function SubmissionList({ challengeId, limit = 3 }: SubmissionListProps) {
   const { data: submissions, isLoading } = useSubmissions(challengeId, limit);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -49,22 +52,61 @@ export function SubmissionList({ challengeId, limit = 3 }: SubmissionListProps) 
       {submissions.slice(0, limit).map((sub) => (
         <div
           key={sub.id}
-          className="flex items-center gap-4 bg-[#111] border border-[#1a1a1a] rounded-xl p-4"
+          className="bg-[#111] border border-[#1a1a1a] rounded-xl p-4"
         >
-          <div className="text-sm font-bold text-[#666] min-w-[50px]">
-            Day {sub.day}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm text-[#888] truncate">{sub.action}</div>
-            <div className="text-xs text-[#666] mt-0.5">
-              {formatRelativeTime(sub.createdAt)}
+          <div className="flex items-center gap-4">
+            <div className="text-sm font-bold text-[#666] min-w-[50px]">
+              Day {sub.day}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-[#ccc]">{sub.action}</div>
+              <div className="text-xs text-[#666] mt-0.5">
+                {formatRelativeTime(sub.createdAt)}
+                {sub.note && <span className="ml-2 text-[#555]">· {sub.note}</span>}
+              </div>
+            </div>
+            <div className="text-sm font-bold text-[#00ff88]">
+              +{formatCurrency(sub.amount)}
             </div>
           </div>
-          <div className="text-sm font-bold text-[#00ff88]">
-            +{formatCurrency(sub.amount)}
-          </div>
+
+          {/* 截图缩略图 */}
+          {sub.screenshotData && (
+            <div className="mt-3 ml-[66px]">
+              <button
+                type="button"
+                onClick={() => setPreviewImage(sub.screenshotData!)}
+                className="group relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0a0a0a] border border-[#222] hover:border-[#00ff88]/30 transition-colors"
+              >
+                <ImageIcon size={14} className="text-[#666] group-hover:text-[#00ff88]" />
+                <span className="text-xs text-[#888] group-hover:text-[#00ff88]">查看截图</span>
+              </button>
+            </div>
+          )}
         </div>
       ))}
+
+      {/* 图片预览 Lightbox */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            type="button"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+            onClick={() => setPreviewImage(null)}
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={previewImage}
+            alt="截图"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
